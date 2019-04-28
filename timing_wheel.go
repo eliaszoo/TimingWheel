@@ -82,13 +82,13 @@ func (tw *TimingWheel) advance() {
 		}
 	}
 
-	tw.slotIndex = (tw.slotIndex + 1) % tw.wheelSize
-	if 0 == tw.slotIndex {
+	if tw.wheelSize == tw.slotIndex {
 		nextTw := atomic.LoadPointer(&tw.nextWheel)
 		if nil != nextTw {
 			(*TimingWheel)(nextTw).advance()
 		}
 	}
+	tw.slotIndex = (tw.slotIndex + 1) % tw.wheelSize
 }
 
 func (tw *TimingWheel) addTimer(duration int, t *timer) {

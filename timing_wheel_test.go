@@ -13,7 +13,7 @@ func TestTimingWheel(t *testing.T) {
 	tw.Run()
 	defer tw.Stop()
 
-	durations := []int {1, 1, 5, 5, 6, 10, 20}
+	durations := []int {1, 1, 5, 5, 6, 10, 50}
 	for _, d := range durations {
 		t.Run("", func(t *testing.T) {
 			tw.AfterFunc(time.Duration(d) * time.Millisecond, func() {
