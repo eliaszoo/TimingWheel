@@ -48,6 +48,7 @@ func newTimingWheel(tick, wheelSize, level int, prev *TimingWheel) *TimingWheel 
 		prevWheel: prev,
 		nextWheel: nil,
 		level: level,
+		exit: make(chan struct{}),
 	}
 }
 
