@@ -6,7 +6,8 @@ import (
 )
 
 type timer struct {
-	callback func()
+	expiredTime 	int64
+	callback 		func()
 }
 
 type slot struct {
@@ -20,7 +21,7 @@ func newSlot() *slot {
 	}
 }
 
-func (s *slot) add(t timer) {
+func (s *slot) add(t *timer) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -34,6 +35,15 @@ func (s *slot) trigger() {
 	s.Unlock()
 
 	for t := l.Front(); t != nil; t = t.Next() {
-		(t.Value).(timer).callback()
+		(t.Value).(*timer).callback()
 	}
+}
+
+func (s *slot) getClear() *list.List {
+	s.Lock()
+	defer s.Unlock()
+
+	l := s.timers
+	s.timers = list.New()
+	return l
 }
