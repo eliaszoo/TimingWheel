@@ -62,9 +62,10 @@ func (tw *TimingWheel) Run() {
 			case <- tw.tick.C:
 				tw.advance()
 			case <- tw.exit:
-				break
+				goto done
 			}
 		}
+done:
 		tw.Done()
 	}()
 }
@@ -78,38 +79,47 @@ func (tw *TimingWheel) advance() {
 		curms := time.Now().UnixNano() / int64(time.Millisecond)
 		for t := timers.Front(); t != nil; t = t.Next() {
 			t := t.Value.(*timer)
-			tw.prevWheel.addTimer(int(t.expiredTime - curms), t)
+			tw.prevWheel._addTimer(int(t.expiredTime - curms), t)
 		}
 	}
 
-	if tw.wheelSize == tw.slotIndex {
+	tw.slotIndex = (tw.slotIndex + 1) % tw.wheelSize
+	if 0 == tw.slotIndex {
 		nextTw := atomic.LoadPointer(&tw.nextWheel)
 		if nil != nextTw {
 			(*TimingWheel)(nextTw).advance()
 		}
 	}
-	tw.slotIndex = (tw.slotIndex + 1) % tw.wheelSize
 }
 
-func (tw *TimingWheel) addTimer(duration int, t *timer) {
+func (tw *TimingWheel) _addTimer(duration int, t *timer) {
+	if duration <= 0 {
+		tw.slots[tw.slotIndex].add(t)
+		return
+	}
+	
 	index := (int(duration / tw.tickMs) + tw.slotIndex) % tw.wheelSize
 	tw.slots[index].add(t)
 }
 
-func (tw *TimingWheel) AfterFunc(duration time.Duration, callback func()) {
-	durationMs := int(duration / time.Millisecond)
-	if durationMs > tw.wheelSize * tw.tickMs {
+func (tw *TimingWheel) addTimer(duration int, t *timer) {
+	if duration > tw.wheelSize * tw.tickMs {
 		nextWheel := atomic.LoadPointer(&tw.nextWheel)
 		if nil == nextWheel {
 			newTw := newTimingWheel(tw.tickMs * tw.wheelSize, tw.wheelSize, tw.level + 1, tw)
 			atomic.CompareAndSwapPointer(&tw.nextWheel, nil, unsafe.Pointer(newTw))
 			nextWheel = atomic.LoadPointer(&tw.nextWheel)
 		}
-		(*TimingWheel)(nextWheel).AfterFunc(duration, callback)
+		(*TimingWheel)(nextWheel).addTimer(duration - tw.wheelSize * tw.tickMs, t)
 	} else {
-		expriedTime := time.Now().UnixNano() / int64(time.Millisecond) + int64(durationMs)
-		tw.addTimer(durationMs, &timer{expriedTime, callback})
+		tw._addTimer(duration, t)
 	}
+} 
+
+func (tw *TimingWheel) AfterFunc(duration time.Duration, callback func()) {
+	durationMs := int(duration / time.Millisecond)
+	expriedTime := time.Now().UnixNano() / int64(time.Millisecond) + int64(durationMs)
+	tw.addTimer(durationMs, &timer{expriedTime, callback})
 }
 
 func (tw *TimingWheel) Stop() {
