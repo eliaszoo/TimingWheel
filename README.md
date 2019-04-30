@@ -1,11 +1,14 @@
-# TimingWheel
-Golang实现的层级时间轮定时器
+## Golang实现的层级时间轮定时器
+
+---
 
 ## TODO
 * 使用小根堆优化ticker, 降低CPU唤醒频率
 
-## Install
+## install
+```
 go get -u github.com/eliaszoo/TimingWheel
+```
 
 ## eg
 ``` Golang
